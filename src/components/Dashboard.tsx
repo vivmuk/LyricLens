@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [segments, setSegments] = useState<LyricSegment[]>([]);
   const [models, setModels] = useState<VeniceModel[]>([]);
   const [textModel, setTextModel] = useState('qwen3-4b');
-  const [imageModel, setImageModel] = useState('qwen-image');
+  const [imageModel, setImageModel] = useState('venice-sd35');
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
