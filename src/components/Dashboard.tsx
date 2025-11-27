@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LyricSegment, VeniceModel } from '@/types';
 import { SegmentCard } from './SegmentCard';
-import { Wand2, Music, Settings2, Loader2, AlertCircle } from 'lucide-react';
+import { Wand2, Music, Settings2, Loader2, AlertCircle, Film } from 'lucide-react';
 
 const STYLES = [
   'Cinematic',
