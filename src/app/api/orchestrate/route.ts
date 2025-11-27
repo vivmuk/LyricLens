@@ -9,7 +9,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lyrics are required' }, { status: 400 });
     }
 
-    const selectedModel = modelId || 'venice-uncensored';
+    // Use a model that supports response_format, or default to one that does
+    // qwen3-4b and qwen3-235b support structured responses
+    const selectedModel = modelId || 'qwen3-4b';
 
     const systemPrompt = `You are an expert Film Director and Visual Artist. 
 Your goal is to turn song lyrics into a sequence of 10-second video scenes.
@@ -19,29 +21,20 @@ Instructions:
 1. Divide the lyrics into logical 10-second segments (roughly 2-4 lines each). If lines are long, use fewer.
 2. For each segment, create a "Visual Prompt" for an AI image generator. Focus on subject, lighting, composition, and the specified style.
 3. For each segment, create a "Motion Prompt" for an AI video generator. Use terms like "Slow pan right", "Zoom in", "Camera orbit", "Morphing shapes".
-4. Return ONLY a JSON object with a "segments" array.
+4. Return ONLY a valid JSON object with a "segments" array. No markdown, no extra text.
 
-JSON Schema:
-{
-  "segments": [
-    {
-      "text": "string (the lyrics for this segment)",
-      "visualPrompt": "string (detailed image prompt)",
-      "motionPrompt": "string (camera movement description)"
-    }
-  ]
-}
+Example output format:
+{"segments":[{"text":"lyrics here","visualPrompt":"detailed image description","motionPrompt":"camera movement"}]}
 `;
 
     const response = await veniceClient.post('/chat/completions', {
       model: selectedModel,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: lyrics }
+        { role: 'user', content: `Here are the lyrics to process:\n\n${lyrics}` }
       ],
-      // Enable JSON mode if supported or just rely on the prompt
-      response_format: { type: "json_object" }, 
       temperature: 0.7,
+      max_completion_tokens: 4096,
     });
 
     const content = response.data.choices[0].message.content;
@@ -49,15 +42,17 @@ JSON Schema:
     // Parse the content to ensure it's valid JSON
     let parsedData;
     try {
+      // Try to parse directly first
       parsedData = JSON.parse(content);
     } catch (e) {
-        // Fallback: try to find JSON in the text if the model chatted around it
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            parsedData = JSON.parse(jsonMatch[0]);
-        } else {
-            throw new Error('Invalid JSON response from LLM');
-        }
+      // Fallback: try to find JSON in the text if the model chatted around it
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedData = JSON.parse(jsonMatch[0]);
+      } else {
+        console.error('Could not parse LLM response:', content);
+        throw new Error('Invalid JSON response from LLM');
+      }
     }
 
     return NextResponse.json({ segments: parsedData.segments });
@@ -65,10 +60,8 @@ JSON Schema:
   } catch (error: any) {
     console.error('Orchestration error:', error.response?.data || error.message);
     return NextResponse.json(
-      { error: 'Failed to orchestrate lyrics' },
+      { error: error.response?.data?.error?.message || 'Failed to orchestrate lyrics' },
       { status: error.response?.status || 500 }
     );
   }
 }
-
-
