@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [segments, setSegments] = useState<LyricSegment[]>([]);
   const [models, setModels] = useState<VeniceModel[]>([]);
   const [textModel, setTextModel] = useState('venice-uncensored');
-  const [imageModel, setImageModel] = useState('venice-sd35');
+  const [imageModel, setImageModel] = useState('qwen-image');
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,8 +34,16 @@ export default function Dashboard() {
 
   const fetchModels = async () => {
     try {
-      const response = await axios.get('/api/models');
-      setModels(response.data.data || []);
+      // Fetch both text and image models
+      const [textResponse, imageResponse] = await Promise.all([
+        axios.get('/api/models?type=text'),
+        axios.get('/api/models?type=image')
+      ]);
+      
+      const textModelsData = textResponse.data.data || [];
+      const imageModelsData = imageResponse.data.data || [];
+      
+      setModels([...textModelsData, ...imageModelsData]);
     } catch (err) {
       console.error('Failed to fetch models', err);
     }
@@ -154,7 +162,7 @@ export default function Dashboard() {
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               >
                 {textModels.length > 0 ? textModels.map(m => (
-                  <option key={m.id} value={m.id}>{m.id}</option>
+                  <option key={m.id} value={m.id}>{m.model_spec?.name || m.id}</option>
                 )) : <option value="venice-uncensored">venice-uncensored</option>}
               </select>
             </div>
@@ -167,8 +175,8 @@ export default function Dashboard() {
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               >
                  {imageModels.length > 0 ? imageModels.map(m => (
-                  <option key={m.id} value={m.id}>{m.id}</option>
-                )) : <option value="venice-sd35">venice-sd35</option>}
+                  <option key={m.id} value={m.id}>{m.model_spec?.name || m.id}</option>
+                )) : <option value="qwen-image">qwen-image</option>}
               </select>
             </div>
 
