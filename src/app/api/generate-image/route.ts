@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { veniceClient } from '@/lib/venice';
 
+// Models that should NOT have steps parameter passed
+const NO_STEPS_MODELS = ['nano-banana-pro', 'qwen-image'];
+
 export async function POST(request: Request) {
   try {
     const { prompt, modelId, style } = await request.json();
@@ -9,8 +12,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    // Default to venice-sd35 which is more reliable
-    const selectedModel = modelId || 'venice-sd35';
+    // Default to nano-banana-pro (Nano Banana Pro)
+    const selectedModel = modelId || 'nano-banana-pro';
 
     // Append style to the prompt
     const finalPrompt = style ? `${prompt}, ${style} style` : prompt;
@@ -23,8 +26,8 @@ export async function POST(request: Request) {
       height: 1024,
     };
 
-    // Only add steps for models that support it (not qwen-image)
-    if (selectedModel !== 'qwen-image') {
+    // Only add steps for models that support it
+    if (!NO_STEPS_MODELS.includes(selectedModel)) {
       payload.steps = 25;
     }
 
