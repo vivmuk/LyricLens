@@ -25,34 +25,34 @@ const VIDEO_MODELS = [
   {
     id: 'veo3-fast-image-to-video',
     name: 'Veo 3 Fast',
-    durations: ['4s', '8s'],
+    durations: ['8s'],
     resolutions: ['720p', '1080p'],
     defaultDuration: '8s',
-    defaultResolution: '720p'
+    defaultResolution: '1080p'
   },
   {
     id: 'veo3-full-image-to-video',
     name: 'Veo 3 Full',
-    durations: ['4s', '8s'],
+    durations: ['8s'],
     resolutions: ['720p', '1080p'],
     defaultDuration: '8s',
-    defaultResolution: '720p'
+    defaultResolution: '1080p'
   },
   {
     id: 'veo3.1-fast-image-to-video',
     name: 'Veo 3.1 Fast',
-    durations: ['4s', '8s'],
+    durations: ['8s'],
     resolutions: ['720p', '1080p'],
     defaultDuration: '8s',
-    defaultResolution: '720p'
+    defaultResolution: '1080p'
   },
   {
     id: 'veo3.1-full-image-to-video',
     name: 'Veo 3.1 Full',
-    durations: ['4s', '8s'],
+    durations: ['8s'],
     resolutions: ['720p', '1080p'],
     defaultDuration: '8s',
-    defaultResolution: '720p'
+    defaultResolution: '1080p'
   },
   {
     id: 'sora-2-image-to-video',
@@ -73,7 +73,7 @@ const VIDEO_MODELS = [
   {
     id: 'wan-2.5-preview-image-to-video',
     name: 'Wan 2.5 Preview',
-    durations: ['5s'],
+    durations: ['5s', '10s'],
     resolutions: ['480p'],
     defaultDuration: '5s',
     defaultResolution: '480p'
@@ -97,7 +97,7 @@ const VIDEO_MODELS = [
   {
     id: 'ltx-2-fast-image-to-video',
     name: 'LTX 2 Fast',
-    durations: ['6s', '10s'],
+    durations: ['6s', '10s', '15s', '20s'],
     resolutions: ['720p'],
     defaultDuration: '6s',
     defaultResolution: '720p'
@@ -113,7 +113,7 @@ const VIDEO_MODELS = [
   {
     id: 'longcat-image-to-video',
     name: 'Longcat',
-    durations: ['5s'],
+    durations: ['5s', '10s', '15s', '30s'],
     resolutions: ['720p'],
     defaultDuration: '5s',
     defaultResolution: '720p'
