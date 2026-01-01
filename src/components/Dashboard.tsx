@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LyricSegment, VeniceModel } from '@/types';
 import { SegmentCard } from './SegmentCard';
-import { Wand2, Music, Settings2, Loader2, AlertCircle, Film, Key } from 'lucide-react';
+import { Wand2, Music, Settings2, Loader2, AlertCircle, Film, Key, Download } from 'lucide-react';
+import JSZip from 'jszip';
 
 const STYLES = [
   'Cinematic',
@@ -21,19 +22,110 @@ const STYLES = [
 
 const VIDEO_MODELS = [
   // Image-to-Video Models
-  { id: 'veo3-fast-image-to-video', name: 'Veo 3 Fast (Image-to-Video)' },
-  { id: 'veo3-full-image-to-video', name: 'Veo 3 Full (Image-to-Video)' },
-  { id: 'veo3.1-fast-image-to-video', name: 'Veo 3.1 Fast (Image-to-Video)' },
-  { id: 'veo3.1-full-image-to-video', name: 'Veo 3.1 Full (Image-to-Video)' },
-  { id: 'sora-2-image-to-video', name: 'Sora 2 (Image-to-Video)' },
-  { id: 'sora-2-pro-image-to-video', name: 'Sora 2 Pro (Image-to-Video)' },
-  { id: 'wan-2.5-preview-image-to-video', name: 'Wan 2.5 Preview (Image-to-Video)' },
-  { id: 'wan-2.1-pro-image-to-video', name: 'Wan 2.1 Pro (Image-to-Video)' },
-  { id: 'kling-2.6-pro-image-to-video', name: 'Kling 2.6 Pro (Image-to-Video)' },
-  { id: 'ltx-2-fast-image-to-video', name: 'LTX 2 Fast (Image-to-Video)' },
-  { id: 'ltx-2-full-image-to-video', name: 'LTX 2 Full (Image-to-Video)' },
-  { id: 'longcat-image-to-video', name: 'Longcat (Image-to-Video)' },
-  { id: 'ovi-image-to-video', name: 'Ovi (Image-to-Video)' },
+  {
+    id: 'veo3-fast-image-to-video',
+    name: 'Veo 3 Fast',
+    durations: ['4s', '8s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '8s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'veo3-full-image-to-video',
+    name: 'Veo 3 Full',
+    durations: ['4s', '8s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '8s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'veo3.1-fast-image-to-video',
+    name: 'Veo 3.1 Fast',
+    durations: ['4s', '8s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '8s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'veo3.1-full-image-to-video',
+    name: 'Veo 3.1 Full',
+    durations: ['4s', '8s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '8s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'sora-2-image-to-video',
+    name: 'Sora 2',
+    durations: ['4s', '8s', '12s'],
+    resolutions: ['720p'],
+    defaultDuration: '4s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'sora-2-pro-image-to-video',
+    name: 'Sora 2 Pro',
+    durations: ['4s', '8s', '12s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '4s',
+    defaultResolution: '1080p'
+  },
+  {
+    id: 'wan-2.5-preview-image-to-video',
+    name: 'Wan 2.5 Preview',
+    durations: ['5s'],
+    resolutions: ['480p'],
+    defaultDuration: '5s',
+    defaultResolution: '480p'
+  },
+  {
+    id: 'wan-2.1-pro-image-to-video',
+    name: 'Wan 2.1 Pro',
+    durations: ['6s'],
+    resolutions: ['480p'],
+    defaultDuration: '6s',
+    defaultResolution: '480p'
+  },
+  {
+    id: 'kling-2.6-pro-image-to-video',
+    name: 'Kling 2.6 Pro',
+    durations: ['5s', '10s'],
+    resolutions: ['720p', '1080p'],
+    defaultDuration: '5s',
+    defaultResolution: '1080p'
+  },
+  {
+    id: 'ltx-2-fast-image-to-video',
+    name: 'LTX 2 Fast',
+    durations: ['6s', '10s'],
+    resolutions: ['720p'],
+    defaultDuration: '6s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'ltx-2-full-image-to-video',
+    name: 'LTX 2 Full',
+    durations: ['6s', '10s'],
+    resolutions: ['720p'],
+    defaultDuration: '6s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'longcat-image-to-video',
+    name: 'Longcat',
+    durations: ['5s'],
+    resolutions: ['720p'],
+    defaultDuration: '5s',
+    defaultResolution: '720p'
+  },
+  {
+    id: 'ovi-image-to-video',
+    name: 'Ovi',
+    durations: ['5s'],
+    resolutions: ['720p'],
+    defaultDuration: '5s',
+    defaultResolution: '720p'
+  },
 ];
 
 export default function Dashboard() {
@@ -44,6 +136,8 @@ export default function Dashboard() {
   const [textModel, setTextModel] = useState('gemini-3-flash-preview');
   const [imageModel, setImageModel] = useState('nano-banana-pro');
   const [videoModel, setVideoModel] = useState(VIDEO_MODELS[0].id);
+  const [videoDuration, setVideoDuration] = useState(VIDEO_MODELS[0].defaultDuration);
+  const [videoResolution, setVideoResolution] = useState(VIDEO_MODELS[0].defaultResolution);
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
@@ -59,6 +153,15 @@ export default function Dashboard() {
       fetchModels();
     }
   }, [apiKey]);
+
+  // Update defaults when video model changes
+  useEffect(() => {
+    const model = VIDEO_MODELS.find(m => m.id === videoModel);
+    if (model) {
+      setVideoDuration(model.defaultDuration);
+      setVideoResolution(model.defaultResolution);
+    }
+  }, [videoModel]);
 
   const fetchModels = async () => {
     try {
@@ -151,7 +254,9 @@ export default function Dashboard() {
       const response = await axios.post('/api/generate-video', {
         imageUrl: segment.imageUrl,
         motionPrompt: segment.motionPrompt,
-        modelId: videoModel
+        modelId: videoModel,
+        duration: videoDuration,
+        resolution: videoResolution
       }, {
         headers: { 'x-venice-api-key': apiKey }
       });
@@ -174,6 +279,71 @@ export default function Dashboard() {
 
   const updateSegment = (id: string, updates: Partial<LyricSegment>) => {
     setSegments(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const handleDownloadProject = async () => {
+    const zip = new JSZip();
+    const folderName = `lyrics-lens-project-${Date.now()}`;
+    const folder = zip.folder(folderName);
+
+    if (!folder) return;
+
+    // 1. Create a text file with all prompts
+    const promptText = segments.map((s, i) =>
+      `Scene ${i + 1} (${s.duration}s)\n` +
+      `Lyrics: "${s.text}"\n` +
+      `Visual Prompt: ${s.visualPrompt}\n` +
+      `Motion Prompt: ${s.motionPrompt}\n` +
+      `----------------------------------------\n`
+    ).join('\n');
+
+    folder.file("prompts.txt", promptText);
+
+    // 2. Add Images and Videos
+    const promises = segments.map(async (s, i) => {
+      const index = i + 1;
+
+      // Save Image
+      if (s.imageUrl) {
+        try {
+          const response = await fetch(s.imageUrl);
+          const blob = await response.blob();
+          folder.file(`scene-${index}-image.webp`, blob); // Assuming webp from Venice
+        } catch (e) {
+          console.error(`Failed to download image for scene ${index}`, e);
+        }
+      }
+
+      // Save Video
+      if (s.videoUrl) {
+        try {
+          // Check if it's a data URL or remote URL
+          if (s.videoUrl.startsWith('data:')) {
+            const base64Data = s.videoUrl.split(',')[1];
+            folder.file(`scene-${index}-video.mp4`, base64Data, { base64: true });
+          } else {
+            const response = await fetch(s.videoUrl);
+            const blob = await response.blob();
+            folder.file(`scene-${index}-video.mp4`, blob);
+          }
+        } catch (e) {
+          console.error(`Failed to download video for scene ${index}`, e);
+        }
+      }
+    });
+
+    await Promise.all(promises);
+
+    // 3. Generate and download zip
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${folderName}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const generateAllImages = () => {
@@ -256,6 +426,33 @@ export default function Dashboard() {
               </select>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Duration</label>
+                <select
+                  value={videoDuration}
+                  onChange={(e) => setVideoDuration(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                >
+                  {VIDEO_MODELS.find(m => m.id === videoModel)?.durations.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  )) || <option value="5s">5s</option>}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-400 mb-1">Resolution</label>
+                <select
+                  value={videoResolution}
+                  onChange={(e) => setVideoResolution(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                >
+                  {VIDEO_MODELS.find(m => m.id === videoModel)?.resolutions.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  )) || <option value="720p">720p</option>}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm text-neutral-400 mb-1">Visual Style</label>
               <div className="grid grid-cols-3 gap-2">
@@ -313,8 +510,18 @@ export default function Dashboard() {
               <button
                 onClick={generateAllImages}
                 className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium transition-colors"
+                title="Generate images for all empty segments"
               >
+                <Wand2 className="inline w-4 h-4 mr-2" />
                 Generate All Images
+              </button>
+              <button
+                onClick={handleDownloadProject}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                title="Download all assets and prompts"
+              >
+                <Download className="w-4 h-4" />
+                Download Project
               </button>
             </div>
             <div className="space-y-4">

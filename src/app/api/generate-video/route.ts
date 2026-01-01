@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'API Key is required' }, { status: 401 });
     }
     const veniceClient = createVeniceClient(apiKey);
-    const { imageUrl, motionPrompt, modelId } = await request.json();
+    const { imageUrl, motionPrompt, modelId, duration, resolution } = await request.json();
 
     if (!motionPrompt) {
       return NextResponse.json({ error: 'Motion Prompt is required' }, { status: 400 });
@@ -21,7 +21,9 @@ export async function POST(request: Request) {
     const payload: any = {
       model: selectedModel,
       prompt: motionPrompt,
-      duration: 10, // Default to 10s as per our segments
+      duration: duration || '8s',
+      aspect_ratio: '16:9',
+      resolution: resolution || undefined
     };
 
     if (imageUrl) {

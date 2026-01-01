@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     const payload: Record<string, any> = {
       model: selectedModel,
       prompt: finalPrompt,
-      width: 1024,
-      height: 1024,
+      width: 1280,
+      height: 720,
     };
 
     // Only add steps for models that support it
