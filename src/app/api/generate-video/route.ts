@@ -10,65 +10,82 @@ export async function POST(request: Request) {
     const veniceClient = createVeniceClient(apiKey);
     const { imageUrl, motionPrompt, modelId } = await request.json();
 
-    if (!imageUrl || !motionPrompt) {
-      return NextResponse.json({ error: 'Image and Motion Prompt are required' }, { status: 400 });
+    if (!motionPrompt) {
+      return NextResponse.json({ error: 'Motion Prompt is required' }, { status: 400 });
     }
 
-    // Strip the data:image/png;base64, prefix if present for the raw payload, 
-    // or keep it if the API expects it. Usually APIs want raw base64 or the full string.
-    // I'll try sending just the base64 part if it has a prefix.
-    let imagePayload = imageUrl;
-    if (imageUrl.startsWith('data:image')) {
-      imagePayload = imageUrl.split(',')[1];
-    }
+    // Default model if not provided
+    const selectedModel = modelId || 'veo3-fast-image-to-video';
 
-    // Use user selected model or default to "wan-2.1" as per PRD
-    const selectedModel = modelId || 'wan-2.1';
-
-    const response = await veniceClient.post('/image/video', {
+    // Prepare payload
+    const payload: any = {
       model: selectedModel,
-      image: imagePayload,
       prompt: motionPrompt,
-      // Add likely parameters
-      duration_seconds: 10,
-      width: 1280,
-      height: 720
-    });
+      duration: 10, // Default to 10s as per our segments
+    };
 
-    // Assume response contains a video URL or base64
-    // If it's base64:
-    if (response.data && response.data.video) {
-      return NextResponse.json({ videoUrl: `data:video/mp4;base64,${response.data.video}` });
-    }
-    // If it's a URL:
-    if (response.data && response.data.url) {
-      return NextResponse.json({ videoUrl: response.data.url });
+    if (imageUrl) {
+      // We pass the full data URI as image_url if present
+      payload.image_url = imageUrl;
     }
 
-    // Fallback/Mock for demo if API is not actually live yet but we want to show UI state
-    // return NextResponse.json({ videoUrl: "https://example.com/mock-video.mp4" });
+    console.log('Queueing video generation with model:', selectedModel);
 
-    return NextResponse.json({ error: 'Unknown response format from Video API' }, { status: 500 });
+    // 1. Queue the job
+    const queueResponse = await veniceClient.post('/video/queue', payload);
+    const queueId = queueResponse.data.queue_id;
+
+    if (!queueId) {
+      throw new Error('No queue_id returned from Venice API');
+    }
+
+    // 2. Poll for results
+    // We'll limit polling to 90 seconds (18 attempts * 5s)
+    const MAX_RETRIES = 18;
+    let attempts = 0;
+
+    while (attempts < MAX_RETRIES) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+      attempts++;
+
+      const retrieveResponse = await veniceClient.post('/video/retrieve', {
+        queue_id: queueId,
+        delete_media_on_completion: true
+      });
+
+      // Check if content type is video or if status indicates completion
+      const contentType = retrieveResponse.headers['content-type'];
+
+      if (contentType === 'video/mp4' || contentType === 'application/octet-stream') {
+        // It's the video binary!
+        // Convert to base64 to send back to client
+        const videoBuffer = Buffer.from(retrieveResponse.data, 'binary');
+        const videoBase64 = videoBuffer.toString('base64');
+        return NextResponse.json({ videoUrl: `data:video/mp4;base64,${videoBase64}` });
+      }
+
+      // Check JSON status if it's still JSON
+      if (retrieveResponse.data && retrieveResponse.data.status === 'PROCESSING') {
+        continue;
+      }
+
+      if (retrieveResponse.data && retrieveResponse.data.status === 'FAILED') {
+        throw new Error(`Video generation failed: ${JSON.stringify(retrieveResponse.data)}`);
+      }
+    }
+
+    return NextResponse.json({ error: 'Timeout waiting for video generation' }, { status: 504 });
 
   } catch (error: any) {
     console.error('Video generation error:', error.response?.data || error.message);
 
-    // MOCK RESPONSE FOR DEMO PURPOSES IF ENDPOINT DOESN'T EXIST
-    // Remove this in production
     if (error.response?.status === 404) {
-      console.warn("Video endpoint not found, returning mock.");
-      // Return a placeholder video or error
-      return NextResponse.json(
-        { error: 'Video generation API endpoint not found (404). This feature might be in beta.' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Endpoint not found. Check API docs.' }, { status: 404 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to generate video' },
+      { error: error.message || 'Failed to generate video' },
       { status: error.response?.status || 500 }
     );
   }
 }
-
-

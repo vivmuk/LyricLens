@@ -19,14 +19,16 @@ export async function POST(request: Request) {
     const selectedModel = modelId || 'gemini-3-flash-preview';
 
     const systemPrompt = `You are an expert Film Director and Visual Artist. 
-Your goal is to turn song lyrics into a sequence of 10-second video scenes.
+Your goal is to turn song lyrics into a sequence of 10-second video scenes that form a cohesive Narrative Arc.
 The user wants the video style to be: "${style || 'Cinematic'}".
 
 Instructions:
 1. Divide the lyrics into logical 10-second segments (roughly 2-4 lines each). If lines are long, use fewer.
-2. For each segment, create a "Visual Prompt" for an AI image generator. Focus on subject, lighting, composition, and the specified style.
-3. For each segment, create a "Motion Prompt" for an AI video generator. Use terms like "Slow pan right", "Zoom in", "Camera orbit", "Morphing shapes".
-4. Return ONLY a valid JSON object with a "segments" array. No markdown, no extra text.
+2. **Narrative Consistency**: Ensure each scene creates a continuous visual story. Scene N should logically flow or cut to Scene N+1. Avoid disjointed random imagery.
+3. For each segment, create a "Visual Prompt" for an AI image generator. Focus on subject, lighting, composition, and the specified style. Describe the scene vividly.
+4. For each segment, create a "Motion Prompt" for an AI video generator. Use terms like "Slow pan right", "Zoom in", "Camera orbit", "Morphing shapes", "Follow subject". explicitly describe how the motion connects the current scene to the mood.
+5. Return ONLY a valid JSON object with a "segments" array. No markdown, no extra text.
+
 
 Example output format:
 {"segments":[{"text":"lyrics here","visualPrompt":"detailed image description","motionPrompt":"camera movement"}]}

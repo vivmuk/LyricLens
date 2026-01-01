@@ -19,6 +19,23 @@ const STYLES = [
   'Oil Painting'
 ];
 
+const VIDEO_MODELS = [
+  // Image-to-Video Models
+  { id: 'veo3-fast-image-to-video', name: 'Veo 3 Fast (Image-to-Video)' },
+  { id: 'veo3-full-image-to-video', name: 'Veo 3 Full (Image-to-Video)' },
+  { id: 'veo3.1-fast-image-to-video', name: 'Veo 3.1 Fast (Image-to-Video)' },
+  { id: 'veo3.1-full-image-to-video', name: 'Veo 3.1 Full (Image-to-Video)' },
+  { id: 'sora-2-image-to-video', name: 'Sora 2 (Image-to-Video)' },
+  { id: 'sora-2-pro-image-to-video', name: 'Sora 2 Pro (Image-to-Video)' },
+  { id: 'wan-2.5-preview-image-to-video', name: 'Wan 2.5 Preview (Image-to-Video)' },
+  { id: 'wan-2.1-pro-image-to-video', name: 'Wan 2.1 Pro (Image-to-Video)' },
+  { id: 'kling-2.6-pro-image-to-video', name: 'Kling 2.6 Pro (Image-to-Video)' },
+  { id: 'ltx-2-fast-image-to-video', name: 'LTX 2 Fast (Image-to-Video)' },
+  { id: 'ltx-2-full-image-to-video', name: 'LTX 2 Full (Image-to-Video)' },
+  { id: 'longcat-image-to-video', name: 'Longcat (Image-to-Video)' },
+  { id: 'ovi-image-to-video', name: 'Ovi (Image-to-Video)' },
+];
+
 export default function Dashboard() {
   const [lyrics, setLyrics] = useState('');
   const [style, setStyle] = useState(STYLES[0]);
@@ -26,6 +43,7 @@ export default function Dashboard() {
   const [models, setModels] = useState<VeniceModel[]>([]);
   const [textModel, setTextModel] = useState('gemini-3-flash-preview');
   const [imageModel, setImageModel] = useState('nano-banana-pro');
+  const [videoModel, setVideoModel] = useState(VIDEO_MODELS[0].id);
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
@@ -133,7 +151,7 @@ export default function Dashboard() {
       const response = await axios.post('/api/generate-video', {
         imageUrl: segment.imageUrl,
         motionPrompt: segment.motionPrompt,
-        // modelId: 'wan-2.1' // Could be selectable if we had video models listed
+        modelId: videoModel
       }, {
         headers: { 'x-venice-api-key': apiKey }
       });
@@ -162,6 +180,10 @@ export default function Dashboard() {
     segments.forEach(s => {
       if (!s.imageUrl) generateImage(s.id);
     });
+  };
+
+  const handleUpdateVisualPrompt = (id: string, newPrompt: string) => {
+    updateSegment(id, { visualPrompt: newPrompt });
   };
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,6 +240,19 @@ export default function Dashboard() {
                 {imageModels.length > 0 ? imageModels.map(m => (
                   <option key={m.id} value={m.id}>{m.model_spec?.name || m.id}</option>
                 )) : <option value="qwen-image">qwen-image</option>}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">Video Generation Model</label>
+              <select
+                value={videoModel}
+                onChange={(e) => setVideoModel(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+              >
+                {VIDEO_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
               </select>
             </div>
 
@@ -290,6 +325,7 @@ export default function Dashboard() {
                   index={index}
                   onRegenerateImage={generateImage}
                   onGenerateVideo={generateVideo}
+                  onUpdateVisualPrompt={handleUpdateVisualPrompt}
                 />
               ))}
             </div>
