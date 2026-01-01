@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
-import { veniceClient } from '@/lib/venice';
+import { createVeniceClient } from '@/lib/venice';
 
 export async function POST(request: Request) {
   try {
+    const apiKey = request.headers.get('x-venice-api-key');
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API Key is required' }, { status: 401 });
+    }
+    const veniceClient = createVeniceClient(apiKey);
     const { lyrics, style, modelId } = await request.json();
 
     if (!lyrics) {
@@ -11,7 +16,7 @@ export async function POST(request: Request) {
 
     // Use a model that supports response_format, or default to one that does
     // qwen3-4b and qwen3-235b support structured responses
-    const selectedModel = modelId || 'qwen3-4b';
+    const selectedModel = modelId || 'gemini-3-flash-preview';
 
     const systemPrompt = `You are an expert Film Director and Visual Artist. 
 Your goal is to turn song lyrics into a sequence of 10-second video scenes.
@@ -38,7 +43,7 @@ Example output format:
     });
 
     const content = response.data.choices[0].message.content;
-    
+
     // Parse the content to ensure it's valid JSON
     let parsedData;
     try {

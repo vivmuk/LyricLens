@@ -1,15 +1,18 @@
 import axios from 'axios';
 
 // In a real deployment, this should be an environment variable.
-const VENICE_API_KEY = 'lnWNeSg0pA_rQUooNpbfpPDBaj2vJnWol5WqKWrIEF';
+// API Key is now passed dynamically
 const BASE_URL = 'https://api.venice.ai/api/v1';
 
-export const veniceClient = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    Authorization: `Bearer ${VENICE_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+
+export const createVeniceClient = (apiKey: string) => {
+  return axios.create({
+    baseURL: BASE_URL,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+  });
+};
 
 

@@ -1,10 +1,11 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LyricSegment, VeniceModel } from '@/types';
 import { SegmentCard } from './SegmentCard';
-import { Wand2, Music, Settings2, Loader2, AlertCircle, Film } from 'lucide-react';
+import { Wand2, Music, Settings2, Loader2, AlertCircle, Film, Key } from 'lucide-react';
 
 const STYLES = [
   'Cinematic',
@@ -23,26 +24,39 @@ export default function Dashboard() {
   const [style, setStyle] = useState(STYLES[0]);
   const [segments, setSegments] = useState<LyricSegment[]>([]);
   const [models, setModels] = useState<VeniceModel[]>([]);
-  const [textModel, setTextModel] = useState('qwen3-4b');
+  const [textModel, setTextModel] = useState('gemini-3-flash-preview');
   const [imageModel, setImageModel] = useState('nano-banana-pro');
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState('');
 
   useEffect(() => {
-    fetchModels();
+    const storedKey = localStorage.getItem('venice_api_key');
+    if (storedKey) setApiKey(storedKey);
   }, []);
+
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem('venice_api_key', apiKey);
+      fetchModels();
+    }
+  }, [apiKey]);
 
   const fetchModels = async () => {
     try {
       // Fetch both text and image models
+      if (!apiKey) return;
+
+      const config = { headers: { 'x-venice-api-key': apiKey } };
+
       const [textResponse, imageResponse] = await Promise.all([
-        axios.get('/api/models?type=text'),
-        axios.get('/api/models?type=image')
+        axios.get('/api/models?type=text', config),
+        axios.get('/api/models?type=image', config)
       ]);
-      
+
       const textModelsData = textResponse.data.data || [];
       const imageModelsData = imageResponse.data.data || [];
-      
+
       setModels([...textModelsData, ...imageModelsData]);
     } catch (err) {
       console.error('Failed to fetch models', err);
@@ -63,6 +77,8 @@ export default function Dashboard() {
         lyrics,
         style,
         modelId: textModel
+      }, {
+        headers: { 'x-venice-api-key': apiKey }
       });
 
       const newSegments = response.data.segments.map((s: any, i: number) => ({
@@ -93,6 +109,8 @@ export default function Dashboard() {
         prompt: segment.visualPrompt,
         style,
         modelId: imageModel
+      }, {
+        headers: { 'x-venice-api-key': apiKey }
       });
 
       updateSegment(segmentId, {
@@ -104,7 +122,7 @@ export default function Dashboard() {
       updateSegmentStatus(segmentId, 'error');
     }
   };
-  
+
   const generateVideo = async (segmentId: string) => {
     const segment = segments.find(s => s.id === segmentId);
     if (!segment || !segment.imageUrl) return;
@@ -116,6 +134,8 @@ export default function Dashboard() {
         imageUrl: segment.imageUrl,
         motionPrompt: segment.motionPrompt,
         // modelId: 'wan-2.1' // Could be selectable if we had video models listed
+      }, {
+        headers: { 'x-venice-api-key': apiKey }
       });
 
       updateSegment(segmentId, {
@@ -144,6 +164,10 @@ export default function Dashboard() {
     });
   };
 
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Sidebar / Controls */}
@@ -152,29 +176,46 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Settings2 className="text-purple-500" /> Configuration
           </h2>
-          
+
           <div className="space-y-4">
-             <div>
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">Venice API Key</label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                  placeholder="Enter your Venice API Key"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 pl-9 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                />
+                <Key size={14} className="absolute left-3 top-2.5 text-neutral-500" />
+              </div>
+              <p className="text-[10px] text-neutral-500 mt-1">
+                Key is stored locally in your browser.
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm text-neutral-400 mb-1">Text Orchestrator Model</label>
-              <select 
+              <select
                 value={textModel}
                 onChange={(e) => setTextModel(e.target.value)}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               >
                 {textModels.length > 0 ? textModels.map(m => (
                   <option key={m.id} value={m.id}>{m.model_spec?.name || m.id}</option>
-                )) : <option value="venice-uncensored">venice-uncensored</option>}
+                )) : <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>}
               </select>
             </div>
 
             <div>
               <label className="block text-sm text-neutral-400 mb-1">Image Generation Model</label>
-              <select 
+              <select
                 value={imageModel}
                 onChange={(e) => setImageModel(e.target.value)}
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               >
-                 {imageModels.length > 0 ? imageModels.map(m => (
+                {imageModels.length > 0 ? imageModels.map(m => (
                   <option key={m.id} value={m.id}>{m.model_spec?.name || m.id}</option>
                 )) : <option value="qwen-image">qwen-image</option>}
               </select>
@@ -187,11 +228,10 @@ export default function Dashboard() {
                   <button
                     key={s}
                     onClick={() => setStyle(s)}
-                    className={`px-2 py-1.5 text-xs rounded-md transition-all ${
-                      style === s 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                    }`}
+                    className={`px-2 py-1.5 text-xs rounded-md transition-all ${style === s
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                      }`}
                   >
                     {s}
                   </button>
@@ -219,8 +259,8 @@ export default function Dashboard() {
             {isOrchestrating ? <Loader2 className="animate-spin" /> : <Wand2 />}
             {isOrchestrating ? 'Orchestrating...' : 'Orchestrate Video'}
           </button>
-          
-           {error && (
+
+          {error && (
             <div className="mt-4 p-3 bg-red-900/20 border border-red-900/50 rounded-lg flex items-start gap-2 text-red-400 text-sm">
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
               <p>{error}</p>
@@ -235,7 +275,7 @@ export default function Dashboard() {
           <>
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Scene Timeline</h2>
-              <button 
+              <button
                 onClick={generateAllImages}
                 className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium transition-colors"
               >
@@ -244,9 +284,9 @@ export default function Dashboard() {
             </div>
             <div className="space-y-4">
               {segments.map((segment, index) => (
-                <SegmentCard 
-                  key={segment.id} 
-                  segment={segment} 
+                <SegmentCard
+                  key={segment.id}
+                  segment={segment}
                   index={index}
                   onRegenerateImage={generateImage}
                   onGenerateVideo={generateVideo}

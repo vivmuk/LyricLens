@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
-import { veniceClient } from '@/lib/venice';
+import { createVeniceClient } from '@/lib/venice';
 
 // Models that should NOT have steps parameter passed
 const NO_STEPS_MODELS = ['nano-banana-pro', 'qwen-image'];
 
 export async function POST(request: Request) {
   try {
+    const apiKey = request.headers.get('x-venice-api-key');
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API Key is required' }, { status: 401 });
+    }
+    const veniceClient = createVeniceClient(apiKey);
     const { prompt, modelId, style } = await request.json();
 
     if (!prompt) {
@@ -37,8 +42,8 @@ export async function POST(request: Request) {
     if (response.data && response.data.images && response.data.images.length > 0) {
       const base64Image = response.data.images[0];
       // Return as a data URL
-      return NextResponse.json({ 
-        imageUrl: `data:image/webp;base64,${base64Image}` 
+      return NextResponse.json({
+        imageUrl: `data:image/webp;base64,${base64Image}`
       });
     } else {
       throw new Error('No image returned from API');
